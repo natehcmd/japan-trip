@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Japan, Together — Our Trip</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;600;700;800&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --sumi:#211c16;--sumi-soft:#4a4239;
+    --washi:#f4eee1;--washi-card:#fbf7ee;--washi-line:#ddd1ba;
+    --kaki:#c0623a;--kaki-deep:#9c4a29;
+    --matsu:#48624b;--murasaki:#6d4b66;--ai:#355074;--yamabuki:#a9762a;--asagi:#2f7d77;--steel:#4f5963;
+    --shadow:0 1px 0 rgba(33,28,22,.04),0 18px 40px -24px rgba(33,28,22,.5);
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+  body{margin:0;background:var(--washi);color:var(--sumi);font-family:"Zen Kaku Gothic New",system-ui,sans-serif;line-height:1.65;-webkit-font-smoothing:antialiased}
+  h1,h2,h3{font-family:"Shippori Mincho",serif;letter-spacing:-.01em}
+  a{color:inherit}
+  .wrap{max-width:1040px;margin:0 auto;padding:0 clamp(18px,4vw,40px)}
+
+  /* nav */
+  nav{position:sticky;top:0;z-index:50;background:rgba(244,238,225,.86);backdrop-filter:blur(10px);border-bottom:1px solid var(--washi-line)}
+  .nav-in{max-width:1040px;margin:0 auto;padding:11px clamp(18px,4vw,40px);display:flex;align-items:center;gap:18px}
+  .brand{display:flex;align-items:center;gap:10px;font-family:"Shippori Mincho",serif;font-weight:700;font-size:1.05rem}
+  .brand .mk{color:var(--kaki);font-size:1.5rem;line-height:1}
+  .nav-links{margin-left:auto;display:flex;gap:6px;align-items:center}
+  .nav-links a{font-size:.86rem;font-weight:600;color:var(--sumi-soft);text-decoration:none;padding:7px 12px;border-radius:8px;transition:background .14s,color .14s}
+  .nav-links a:hover{background:var(--washi-card);color:var(--sumi)}
+  .nav-links a.cta{background:var(--sumi);color:var(--washi)}
+  .nav-links a.cta:hover{background:var(--kaki-deep)}
+  @media(max-width:620px){.nav-links a.hideph{display:none}}
+
+  /* hero */
+  .hero{position:relative;overflow:hidden;background:linear-gradient(180deg,#f7ede0 0%,#f3e6d6 38%,#eedcc8 100%)}
+  .hero-art{position:absolute;inset:0;width:100%;height:100%;display:block}
+  .hero-in{position:relative;z-index:2;max-width:1040px;margin:0 auto;padding:clamp(54px,11vw,120px) clamp(18px,4vw,40px) clamp(150px,22vw,240px)}
+  .eyebrow{font-size:.76rem;letter-spacing:.34em;text-transform:uppercase;color:var(--kaki-deep);font-weight:700;margin:0 0 16px}
+  .hero h1{font-size:clamp(2.6rem,9vw,5.4rem);line-height:.98;font-weight:800;margin:0 0 14px}
+  .hero h1 .jp{display:block;font-size:.32em;font-weight:600;color:var(--sumi-soft);letter-spacing:.1em;margin-top:12px}
+  .hero .sub{font-size:clamp(1.05rem,2.4vw,1.3rem);color:var(--sumi-soft);max-width:30ch;margin:0 0 28px;font-weight:500}
+  .hero-cta{display:flex;flex-wrap:wrap;gap:12px}
+  .btn{appearance:none;border:0;cursor:pointer;font-family:inherit;font-weight:700;font-size:.96rem;padding:14px 24px;border-radius:30px;text-decoration:none;display:inline-flex;align-items:center;gap:9px;transition:transform .14s,box-shadow .14s,background .14s}
+  .btn:hover{transform:translateY(-2px)}
+  .btn-primary{background:var(--kaki);color:#fff;box-shadow:0 12px 28px -12px rgba(192,98,58,.7)}
+  .btn-primary:hover{background:var(--kaki-deep)}
+  .btn-ghost{background:transparent;color:var(--sumi);border:1.5px solid var(--sumi)}
+  .btn-ghost:hover{background:var(--sumi);color:var(--washi)}
+
+  /* sections */
+  section{padding:clamp(54px,9vw,96px) 0}
+  .sec-label{font-size:.76rem;letter-spacing:.22em;text-transform:uppercase;font-weight:700;color:var(--kaki-deep);margin:0 0 12px;display:flex;align-items:center;gap:12px}
+  .sec-label::before{content:"";width:30px;height:1px;background:var(--kaki)}
+  h2.sec-title{font-size:clamp(1.8rem,5vw,2.9rem);font-weight:700;line-height:1.05;margin:0 0 16px;max-width:18ch}
+  .sec-intro{font-size:1.06rem;color:var(--sumi-soft);max-width:60ch;margin:0 0 40px}
+
+  .reveal{opacity:0;transform:translateY(20px);transition:opacity .7s ease,transform .7s ease}
+  .reveal.in{opacity:1;transform:none}
+
+  /* when card */
+  .when{background:var(--washi-card);border:1px solid var(--washi-line);border-radius:22px;padding:clamp(24px,4vw,44px);box-shadow:var(--shadow);position:relative;overflow:hidden}
+  .when::before{content:"九月";position:absolute;right:-6px;top:-26px;font-family:"Shippori Mincho",serif;font-size:9rem;font-weight:800;color:rgba(192,98,58,.07);line-height:1;pointer-events:none}
+  .when h3{font-size:1.5rem;margin:0 0 10px;position:relative}
+  .when p{color:var(--sumi-soft);max-width:58ch;margin:0 0 24px;position:relative}
+  .stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;position:relative}
+  @media(max-width:640px){.stat-row{grid-template-columns:repeat(2,1fr)}}
+  .stat{background:var(--washi);border:1px solid var(--washi-line);border-radius:13px;padding:16px}
+  .stat .num{font-family:"Shippori Mincho",serif;font-size:1.6rem;font-weight:700;line-height:1;color:var(--kaki-deep)}
+  .stat .lab{font-size:.82rem;color:var(--sumi-soft);margin-top:6px;font-weight:500}
+
+  /* cities */
+  .cities{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+  @media(max-width:820px){.cities{grid-template-columns:1fr}}
+  .city{background:var(--washi-card);border:1px solid var(--washi-line);border-radius:18px;padding:26px;box-shadow:var(--shadow);position:relative}
+  .city .jp{font-family:"Shippori Mincho",serif;font-size:2.4rem;font-weight:800;color:var(--kaki);line-height:1;margin-bottom:4px}
+  .city h3{font-size:1.4rem;margin:0 0 2px}
+  .city .days{font-size:.78rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--asagi);margin-bottom:12px}
+  .city p{font-size:.94rem;color:var(--sumi-soft);margin:0 0 14px}
+  .city ul{margin:0;padding-left:18px;font-size:.9rem;color:var(--sumi-soft)}
+  .city li{margin-bottom:5px}
+
+  /* categories */
+  .cats{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
+  @media(max-width:760px){.cats{grid-template-columns:1fr}}
+  .cat{background:var(--washi-card);border:1px solid var(--washi-line);border-left:5px solid var(--c);border-radius:15px;padding:22px 24px;box-shadow:var(--shadow)}
+  .cat h3{font-size:1.2rem;margin:0 0 4px;color:var(--c)}
+  .cat .ex{font-size:.93rem;color:var(--sumi-soft);margin:0}
+
+  /* feature (car day) */
+  .feature{background:linear-gradient(135deg,#2b2f34,#3c434b);color:#f1ece2;border-radius:24px;padding:clamp(28px,5vw,52px);box-shadow:var(--shadow);position:relative;overflow:hidden}
+  .feature::after{content:"車";position:absolute;right:18px;bottom:-30px;font-family:"Shippori Mincho",serif;font-size:11rem;font-weight:800;color:rgba(255,255,255,.05);line-height:1}
+  .feature .sec-label{color:#e8a989}
+  .feature .sec-label::before{background:#e8a989}
+  .feature h2{font-size:clamp(1.7rem,4.6vw,2.6rem);margin:0 0 14px;color:#fff}
+  .feature p{color:#d5cdc1;max-width:56ch;margin:0 0 22px;position:relative;z-index:2}
+  .feature .chips{display:flex;flex-wrap:wrap;gap:10px;position:relative;z-index:2}
+  .chip{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);border-radius:30px;padding:8px 16px;font-size:.86rem;font-weight:600}
+  .feature .idp{margin-top:24px;background:rgba(232,169,137,.16);border:1px solid rgba(232,169,137,.4);border-radius:13px;padding:14px 18px;font-size:.92rem;position:relative;z-index:2}
+  .feature .idp b{color:#f3c4ab}
+
+  /* checklist */
+  .checks{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+  @media(max-width:680px){.checks{grid-template-columns:1fr}}
+  .check{display:flex;gap:13px;align-items:flex-start;background:var(--washi-card);border:1px solid var(--washi-line);border-radius:13px;padding:16px 18px}
+  .check .bx{flex:0 0 auto;width:22px;height:22px;border-radius:6px;border:2px solid var(--kaki);display:grid;place-items:center;margin-top:1px;color:var(--kaki);font-weight:800;font-size:.8rem}
+  .check .t{font-weight:700;font-size:.96rem}
+  .check .d{font-size:.88rem;color:var(--sumi-soft)}
+
+  /* budget */
+  .budget{background:var(--washi-card);border:1px solid var(--washi-line);border-radius:20px;padding:clamp(22px,4vw,38px);box-shadow:var(--shadow)}
+  .brow{display:flex;justify-content:space-between;align-items:baseline;gap:16px;padding:14px 0;border-bottom:1px solid var(--washi-line)}
+  .brow:last-of-type{border-bottom:0}
+  .brow .bk{font-weight:600}
+  .brow .bk small{display:block;font-size:.8rem;color:var(--sumi-soft);font-weight:400}
+  .brow .bv{font-family:"Shippori Mincho",serif;font-weight:700;white-space:nowrap}
+  .btotal{margin-top:8px;padding-top:18px;border-top:2px solid var(--sumi);display:flex;justify-content:space-between;align-items:baseline}
+  .btotal .bk{font-family:"Shippori Mincho",serif;font-size:1.2rem;font-weight:700}
+  .btotal .bv{font-family:"Shippori Mincho",serif;font-size:1.5rem;font-weight:800;color:var(--kaki-deep)}
+  .bnote{font-size:.84rem;color:var(--sumi-soft);margin:14px 0 0}
+
+  /* final cta */
+  .final{text-align:center;background:linear-gradient(180deg,var(--washi-card),#f1e6d4);border:1px solid var(--washi-line);border-radius:24px;padding:clamp(34px,6vw,64px);box-shadow:var(--shadow)}
+  .final .mk{font-family:"Shippori Mincho",serif;font-size:3rem;color:var(--kaki);line-height:1}
+  .final h2{font-size:clamp(1.6rem,4.4vw,2.4rem);margin:14px 0 12px}
+  .final p{color:var(--sumi-soft);max-width:48ch;margin:0 auto 26px}
+
+  footer{padding:30px 0 50px;text-align:center;font-size:.84rem;color:var(--sumi-soft)}
+  footer .jp{font-family:"Shippori Mincho",serif}
+
+  @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.reveal{opacity:1;transform:none;transition:none}.btn:hover{transform:none}}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-in">
+    <span class="brand"><span class="mk">旅</span>Japan, Together</span>
+    <div class="nav-links">
+      <a href="#when" class="hideph">When</a>
+      <a href="#cities" class="hideph">Cities</a>
+      <a href="#do" class="hideph">What we'll do</a>
+      <a href="#before" class="hideph">Before we go</a>
+      <a href="index.html" class="cta">Open planner</a>
+    </div>
+  </div>
+</nav>
+
+<header class="hero">
+  <svg class="hero-art" viewBox="0 0 1440 600" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
+    <circle cx="1080" cy="250" r="170" fill="#e89a6e" opacity="0.55"/>
+    <circle cx="1080" cy="250" r="120" fill="#e07f4f" opacity="0.5"/>
+    <!-- distant fuji -->
+    <path d="M520 600 L900 600 L770 300 Q720 250 670 300 Z" fill="#c9b9a2" opacity="0.8"/>
+    <path d="M712 318 Q720 305 728 318 L745 345 Q720 332 695 345 Z" fill="#f4eee1"/>
+    <!-- hills -->
+    <path d="M0 600 L0 470 Q260 400 520 470 T1040 470 T1440 440 L1440 600 Z" fill="#b89f86" opacity="0.55"/>
+    <path d="M0 600 L0 530 Q360 480 720 525 T1440 520 L1440 600 Z" fill="#9c8468" opacity="0.5"/>
+    <!-- torii -->
+    <g fill="#a8472b">
+      <rect x="150" y="360" width="20" height="190"/>
+      <rect x="300" y="360" width="20" height="190"/>
+      <rect x="120" y="345" width="230" height="22" rx="3"/>
+      <rect x="135" y="320" width="200" height="16" rx="3"/>
+      <rect x="222" y="367" width="26" height="40"/>
+    </g>
+  </svg>
+  <div class="hero-in">
+    <p class="eyebrow">A father &amp; son trip · September 2026</p>
+    <h1>Japan,<br>Together<span class="jp">日本へ、ふたりで</span></h1>
+    <p class="sub">Ten days. Three cities. One early autumn, the two of us.</p>
+    <div class="hero-cta">
+      <a href="index.html" class="btn btn-primary">Open the day planner →</a>
+      <a href="#when" class="btn btn-ghost">See the plan ↓</a>
+    </div>
+  </div>
+</header>
+
+<main>
+
+<!-- WHEN -->
+<section id="when"><div class="wrap reveal">
+  <p class="sec-label">When we're going</p>
+  <h2 class="sec-title">Late September is the sweet spot</h2>
+  <p class="sec-intro">September is the tail of summer easing into autumn. The first half is hot and humid; by the last week it settles into warm, comfortable days with far fewer tourists than spring or peak fall. It's typhoon season, but Tokyo, Kyoto and Osaka sit inland and mostly just see passing rain.</p>
+  <div class="when">
+    <h3>What to expect</h3>
+    <p>Warm and walkable by late month, autumn flavors arriving on menus, and quiet temples and streets. We keep one open day in the middle as weather insurance, skip non-refundable hotels, and pack a light rain jacket instead of an umbrella.</p>
+    <div class="stat-row">
+      <div class="stat"><div class="num">25°C</div><div class="lab">Comfortable late-month highs</div></div>
+      <div class="stat"><div class="num">Low</div><div class="lab">Crowds vs spring &amp; November</div></div>
+      <div class="stat"><div class="num">1 day</div><div class="lab">Flex day held for weather</div></div>
+      <div class="stat"><div class="num">Sep 19–23</div><div class="lab">Silver Week — book around it</div></div>
+    </div>
+  </div>
+</div></section>
+
+<!-- CITIES -->
+<section id="cities" style="background:linear-gradient(180deg,transparent,rgba(192,98,58,.04));"><div class="wrap reveal">
+  <p class="sec-label">The route</p>
+  <h2 class="sec-title">Three cities, three different feelings</h2>
+  <p class="sec-intro">We start in the modern rush of Tokyo, slow down in the old capital of Kyoto, and finish loud and full in Osaka — with the bullet train stitching it all together.</p>
+  <div class="cities">
+    <div class="city">
+      <div class="jp">東京</div>
+      <h3>Tokyo</h3>
+      <div class="days">Days 1–4 · the modern heart</div>
+      <p>Neon, food, technology, and car culture — the most electric city on earth.</p>
+      <ul>
+        <li>teamLab digital art &amp; Shibuya Sky</li>
+        <li>Tsukiji market breakfast</li>
+        <li>Shimokitazawa &amp; Golden Gai</li>
+        <li>Daikoku car meets at night</li>
+      </ul>
+    </div>
+    <div class="city">
+      <div class="jp">京都</div>
+      <h3>Kyoto</h3>
+      <div class="days">Days 5–7 · the old capital</div>
+      <p>Temples, torii gates and quiet — the Japan of a thousand years ago.</p>
+      <ul>
+        <li>Fushimi Inari's red gates</li>
+        <li>Arashiyama bamboo grove</li>
+        <li>A ryokan &amp; kaiseki dinner</li>
+        <li>Gion at dusk</li>
+      </ul>
+    </div>
+    <div class="city">
+      <div class="jp">大阪</div>
+      <h3>Osaka</h3>
+      <div class="days">Days 8–10 · food &amp; fun</div>
+      <p>Looser, louder and all about eating — with Nara's deer a short ride away.</p>
+      <ul>
+        <li>Dotonbori street food</li>
+        <li>Kuromon Market</li>
+        <li>Day trip to Nara's deer</li>
+        <li>Super Nintendo World</li>
+      </ul>
+    </div>
+  </div>
+</div></section>
+
+<!-- WHAT WE'LL DO -->
+<section id="do"><div class="wrap reveal">
+  <p class="sec-label">What we'll do</p>
+  <h2 class="sec-title">Everything we love, in one trip</h2>
+  <p class="sec-intro">Nearly eighty ideas live in the planner, sorted into seven kinds of day. Here's the shape of it — tap “Open planner” any time to see the full list and how it shifts by month.</p>
+  <div class="cats">
+    <div class="cat" style="--c:var(--matsu)"><h3>Nature</h3><p class="ex">Mt. Fuji views, the bamboo grove, Nara's deer, an onsen soak, a night in a mountain temple.</p></div>
+    <div class="cat" style="--c:var(--murasaki)"><h3>History &amp; Culture</h3><p class="ex">Fushimi Inari, the Golden Pavilion, Himeji Castle, Miyajima's floating gate, a tea ceremony.</p></div>
+    <div class="cat" style="--c:var(--kaki)"><h3>Food &amp; Drink</h3><p class="ex">Tsukiji sushi breakfast, ramen booths, Kobe beef, Dotonbori street food, jiggly pancakes.</p></div>
+    <div class="cat" style="--c:var(--ai)"><h3>Tech &amp; Modern</h3><p class="ex">teamLab, Akihabara arcades, Shibuya Sky, the Ghibli Museum, a capsule-hotel night.</p></div>
+    <div class="cat" style="--c:var(--steel)"><h3>Cars &amp; Motorsport</h3><p class="ex">Daikoku car meets, Up Garage parts hunts, Nissan Crossing, Liberty Walk, street go-karting.</p></div>
+    <div class="cat" style="--c:var(--yamabuki)"><h3>Streets &amp; Nightlife</h3><p class="ex">Golden Gai's tiny bars, Omoide Yokocho, karaoke, a wild Japanese baseball game.</p></div>
+  </div>
+</div></section>
+
+<!-- FEATURE: CAR DAY -->
+<section><div class="wrap reveal">
+  <div class="feature">
+    <p class="sec-label">One day, just for the cars</p>
+    <h2>Nate's day behind the wheel</h2>
+    <p>Japan is holy ground for car people, and we're carving out a day for it — the late-night highway meets, the parts shops, and a drive through the city that you can't get anywhere else on earth.</p>
+    <div class="chips">
+      <span class="chip">Daikoku PA meets</span>
+      <span class="chip">Up Garage parts hunt</span>
+      <span class="chip">Super Autobacs</span>
+      <span class="chip">Nissan Crossing</span>
+      <span class="chip">Street go-karting</span>
+    </div>
+    <div class="idp"><b>One thing to handle first:</b> the driving and go-karting need an International Driving Permit, picked up in the US before we fly (AAA, about $20, a few minutes). Same errand as the passport.</div>
+  </div>
+</div></section>
+
+<!-- BEFORE WE GO -->
+<section id="before" style="background:linear-gradient(180deg,rgba(53,80,116,.04),transparent);"><div class="wrap reveal">
+  <p class="sec-label">Before we go</p>
+  <h2 class="sec-title">A short list to handle early</h2>
+  <p class="sec-intro">A few things sell out or need lead time. Knock these out and the rest is easy.</p>
+  <div class="checks">
+    <div class="check"><span class="bx">✓</span><span><span class="t">Passports</span><br><span class="d">Valid with plenty of time left. Nate's appointment is set.</span></span></div>
+    <div class="check"><span class="bx">✓</span><span><span class="t">International Driving Permit</span><br><span class="d">From AAA in the US — required for any driving or go-karting.</span></span></div>
+    <div class="check"><span class="bx">✓</span><span><span class="t">JR Pass</span><br><span class="d">Buy before flying; covers the bullet trains between cities.</span></span></div>
+    <div class="check"><span class="bx">✓</span><span><span class="t">Suica card</span><br><span class="d">Add to a phone wallet for trains and convenience stores.</span></span></div>
+    <div class="check"><span class="bx">✓</span><span><span class="t">Book the sell-outs</span><br><span class="d">teamLab, the Ghibli Museum, and a ryokan night go fast.</span></span></div>
+    <div class="check"><span class="bx">✓</span><span><span class="t">Hold one flex day</span><br><span class="d">Weather insurance, and skip non-refundable hotels in September.</span></span></div>
+  </div>
+</div></section>
+
+<!-- BUDGET -->
+<section><div class="wrap reveal">
+  <p class="sec-label">Rough budget</p>
+  <h2 class="sec-title">What ten days runs, each</h2>
+  <p class="sec-intro">A realistic per-person estimate for the trip. Flights and hotels move the most, so booking early is where we save.</p>
+  <div class="budget">
+    <div class="brow"><span class="bk">Flights <small>round trip, Dallas → Tokyo</small></span><span class="bv">$900 – 1,200</span></div>
+    <div class="brow"><span class="bk">JR Pass <small>bullet trains, 14-day</small></span><span class="bv">~$435</span></div>
+    <div class="brow"><span class="bk">Hotels <small>10 nights, mixed</small></span><span class="bv">$800 – 1,200</span></div>
+    <div class="brow"><span class="bk">One ryokan night <small>with kaiseki dinner</small></span><span class="bv">$150 – 250</span></div>
+    <div class="brow"><span class="bk">Food <small>~$50 a day</small></span><span class="bv">~$500</span></div>
+    <div class="brow"><span class="bk">Activities <small>tickets &amp; experiences</small></span><span class="bv">$200 – 300</span></div>
+    <div class="btotal"><span class="bk">Per person</span><span class="bv">~$3,000 – 3,500</span></div>
+    <p class="bnote">Excludes shopping and souvenirs — and whatever follows us home from Up Garage.</p>
+  </div>
+</div></section>
+
+<!-- FINAL CTA -->
+<section><div class="wrap reveal">
+  <div class="final">
+    <div class="mk">旅</div>
+    <h2>Ready to pick the days?</h2>
+    <p>The planner has all 79 ideas, sorted by category, and it changes with the month you choose. That's where we build the real schedule.</p>
+    <a href="index.html" class="btn btn-primary">Open the day planner →</a>
+  </div>
+</div></section>
+
+</main>
+
+<footer>
+  <p class="jp">良い旅を</p>
+  <p>Keep this file and the planner together in the same folder so the buttons work.</p>
+</footer>
+
+<script>
+  const io=new IntersectionObserver((entries)=>{
+    entries.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}});
+  },{threshold:0.12});
+  document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+</script>
+</body>
+</html>
