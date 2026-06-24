@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;600;700;800&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <style>
 :root {
   --sumi:#211c16; --sumi-soft:#4a4239;
@@ -187,11 +188,26 @@ nav{position:sticky;top:0;z-index:100;background:rgba(244,238,225,.9);backdrop-f
 .chat-send{background:var(--kaki);color:#fff;border:none;border-radius:20px;padding:8px 16px;font-size:.82rem;font-weight:700;transition:background .14s}
 .chat-send:hover{background:var(--kaki-deep)}
 
+/* MINI MAP */
+.mini-map-panel{position:fixed;bottom:28px;left:28px;z-index:250;width:260px;background:var(--washi-card);border:1px solid var(--washi-line);border-radius:16px;overflow:hidden;box-shadow:0 8px 32px -8px rgba(33,28,22,.55);display:none;transition:all .2s}
+.mini-map-head{padding:9px 14px;border-bottom:1px solid var(--washi-line);display:flex;align-items:center;justify-content:space-between;background:var(--washi-card)}
+.mini-map-head .mm-title{font-size:.8rem;font-weight:700;display:flex;align-items:center;gap:6px}
+.mini-map-head .mm-count{font-size:.72rem;background:var(--kaki);color:#fff;border-radius:20px;padding:1px 7px;font-weight:700}
+.mini-map-toggle{background:none;border:none;color:var(--sumi-soft);font-size:.9rem;padding:2px 6px;cursor:pointer;border-radius:6px;transition:background .14s}
+.mini-map-toggle:hover{background:var(--washi-line)}
+#miniMap{height:180px;transition:height .2s}
+#miniMap.collapsed{height:0}
+.mini-map-legend{display:flex;gap:10px;padding:7px 14px;border-top:1px solid var(--washi-line);flex-wrap:wrap}
+.mini-map-legend.collapsed{display:none}
+.mm-leg{display:flex;align-items:center;gap:5px;font-size:.72rem;color:var(--sumi-soft);font-weight:600}
+.mm-dot{width:9px;height:9px;border-radius:50%}
+
 /* MOBILE */
 @media(max-width:640px){
   .nav-budget .budget-label{display:none}
   .chat-panel{right:12px;bottom:90px;width:calc(100vw - 24px)}
   .chat-fab{bottom:16px;right:16px}
+  .mini-map-panel{left:12px;bottom:90px;width:calc(100vw - 24px)}
 }
 </style>
 </head>
@@ -285,6 +301,20 @@ nav{position:sticky;top:0;z-index:100;background:rgba(244,238,225,.9);backdrop-f
   </div>
 </div>
 
+<!-- MINI MAP -->
+<div class="mini-map-panel" id="miniMapPanel">
+  <div class="mini-map-head">
+    <span class="mm-title">🗺️ Your Route <span class="mm-count" id="mmCount">0</span></span>
+    <button class="mini-map-toggle" id="mmToggleBtn" onclick="toggleMiniMap()">−</button>
+  </div>
+  <div id="miniMap"></div>
+  <div class="mini-map-legend" id="mmLegend">
+    <span class="mm-leg"><span class="mm-dot" style="background:#355074"></span>Tokyo</span>
+    <span class="mm-leg"><span class="mm-dot" style="background:#48624b"></span>Kyoto</span>
+    <span class="mm-leg"><span class="mm-dot" style="background:#6d4b66"></span>Osaka</span>
+  </div>
+</div>
+
 <!-- CHATBOT -->
 <button class="chat-fab" id="chatFab" onclick="toggleChat()" aria-label="Open trip assistant">
   <span>🗾</span>
@@ -308,62 +338,63 @@ nav{position:sticky;top:0;z-index:100;background:rgba(244,238,225,.9);backdrop-f
   </div>
 </div>
 
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
 // ============================================================
 // DATA
 // ============================================================
 const ACTIVITIES = [
   // TOKYO
-  {id:'t1',name:'teamLab Borderless',city:'Tokyo',cat:'Tech',emoji:'🌐',duration:3,cost:30,desc:'Immersive rooms of living digital art — light and sound you can walk through. One of the most unique places on Earth.',bookAhead:true,bookNote:'Book at teamlab.art 2–4 weeks ahead',bookUrl:'https://www.teamlab.art/e/borderless/',siteUrl:'https://www.teamlab.art/e/borderless/',mapUrl:'https://maps.google.com/?q=teamLab+Borderless+Tokyo'},
-  {id:'t2',name:'Shibuya Sky',city:'Tokyo',cat:'Tech',emoji:'🌆',duration:1.5,cost:20,desc:'360° rooftop observation deck high above the Shibuya Scramble crossing. Stunning day or night.',bookAhead:true,bookNote:'Book online to skip the line',bookUrl:'https://www.shibuya-sky.com/en/ticket/',siteUrl:'https://www.shibuya-sky.com/en/',mapUrl:'https://maps.google.com/?q=Shibuya+Sky+Tokyo'},
-  {id:'t3',name:'Akihabara Arcades',city:'Tokyo',cat:'Tech',emoji:'🕹️',duration:2,cost:20,desc:'Multi-floor game arcades packed with retro cabs, claw machines, and every game you can imagine.',bookAhead:false,mapUrl:'https://maps.google.com/?q=Akihabara+Electric+Town+Tokyo'},
-  {id:'t4',name:'Ghibli Museum',city:'Tokyo',cat:'Tech',emoji:'🎬',duration:3,cost:15,desc:"Studio Ghibli's magical museum in Mitaka. Robots, original animation cells, and a rooftop Totoro.",bookAhead:true,bookNote:'Sells out months ahead — book at l-tike.com the moment tickets open (10th of each month)',bookUrl:'https://l-tike.com/st1/mitaka-en',siteUrl:'https://www.ghibli-museum.jp/en/',mapUrl:'https://maps.google.com/?q=Ghibli+Museum+Mitaka+Tokyo'},
-  {id:'t5',name:'Tokyo Skytree',city:'Tokyo',cat:'Tech',emoji:'🗼',duration:1.5,cost:25,desc:'The tallest tower in Japan with two observation decks. Clear days you can spot Mt. Fuji.',bookAhead:false,siteUrl:'https://www.tokyo-skytree.jp/en/',mapUrl:'https://maps.google.com/?q=Tokyo+Skytree'},
-  {id:'t6',name:'Tsukiji Market Breakfast',city:'Tokyo',cat:'Food',emoji:'🍣',duration:2,cost:25,desc:"The outer market still hums with the world's best sushi breakfast. Go 6–8am for the freshest cuts.",bookAhead:false,siteUrl:'https://www.tsukiji.or.jp/english/',mapUrl:'https://maps.google.com/?q=Tsukiji+Outer+Market+Tokyo'},
-  {id:'t7',name:'Ramen in Shinjuku',city:'Tokyo',cat:'Food',emoji:'🍜',duration:1,cost:15,desc:'Deep broth, chewy noodles, perfect egg. Ichiran or Fuunji — both lines are worth it.',bookAhead:false,siteUrl:'https://en.ichiran.com/',mapUrl:'https://maps.google.com/?q=Ichiran+Ramen+Shinjuku+Tokyo'},
-  {id:'t8',name:'Jiggly Pancakes',city:'Tokyo',cat:'Food',emoji:'🥞',duration:1,cost:15,desc:'Soufflé pancakes that wobble when the plate arrives. The line is part of the experience.',bookAhead:false,mapUrl:'https://maps.google.com/?q=A+Happy+Pancake+Omotesando+Tokyo'},
-  {id:'t9',name:'Omoide Yokocho',city:'Tokyo',cat:'Food',emoji:'🏮',duration:2,cost:30,desc:'Memory Lane — a tiny smoky alley in Shinjuku packed with izakayas. Order yakitori and cold beer.',bookAhead:false,mapUrl:'https://maps.google.com/?q=Omoide+Yokocho+Shinjuku+Tokyo'},
-  {id:'t10',name:'Golden Gai Bar Hopping',city:'Tokyo',cat:'Nightlife',emoji:'🍺',duration:3,cost:30,desc:'Six narrow alleys with 200+ tiny bars, each seating 6–8 people. Every bar has its own personality.',bookAhead:false,mapUrl:'https://maps.google.com/?q=Golden+Gai+Shinjuku+Tokyo'},
-  {id:'t11',name:'Shimokitazawa Vintage',city:'Tokyo',cat:'Nightlife',emoji:'👕',duration:2,cost:0,desc:"Tokyo's coolest neighborhood — vintage clothes, record shops, live music, and great coffee.",bookAhead:false,mapUrl:'https://maps.google.com/?q=Shimokitazawa+Tokyo'},
-  {id:'t12',name:'Harajuku & Takeshita Dori',city:'Tokyo',cat:'Nightlife',emoji:'🌈',duration:1.5,cost:0,desc:'Wild fashion, crepe stands, and people-watching at its most Tokyo. Short walk from Meiji Shrine.',bookAhead:false,mapUrl:'https://maps.google.com/?q=Takeshita+Street+Harajuku+Tokyo'},
-  {id:'t13',name:'Senso-ji Temple',city:'Tokyo',cat:'History',emoji:'⛩️',duration:1.5,cost:0,desc:"Tokyo's oldest temple in Asakusa. Nakamise shopping street leads up to it — buy ningyo-yaki cakes.",bookAhead:false,siteUrl:'https://www.senso-ji.jp/english/',mapUrl:'https://maps.google.com/?q=Senso-ji+Temple+Asakusa+Tokyo'},
-  {id:'t14',name:'Meiji Shrine',city:'Tokyo',cat:'History',emoji:'🌲',duration:1,cost:0,desc:'A forested Shinto shrine in the middle of the city. Peaceful, grand, and a completely different world from Shibuya.',bookAhead:false,siteUrl:'https://www.meijijingu.or.jp/en/',mapUrl:'https://maps.google.com/?q=Meiji+Shrine+Tokyo'},
-  {id:'t15',name:'Daikoku PA Car Meet',city:'Tokyo',cat:'Cars',emoji:'🚗',duration:3,cost:0,desc:'Late-night highway service area that becomes a spontaneous car show. R34s, GTRs, AEs — pure JDM holy land. Go 10pm+.',bookAhead:false,mapUrl:'https://maps.google.com/?q=Daikoku+Parking+Area+Yokohama'},
-  {id:'t16',name:'Up Garage Parts Hunt',city:'Tokyo',cat:'Cars',emoji:'🔧',duration:2,cost:0,desc:"Japan's biggest used JDM parts chain. You will find things you didn't know you needed.",bookAhead:false,siteUrl:'https://www.up-garage.com/',mapUrl:'https://maps.google.com/?q=Up+Garage+Tokyo'},
-  {id:'t17',name:'Street Go-Karting',city:'Tokyo',cat:'Cars',emoji:'🏎️',duration:1.5,cost:50,desc:'Drive Mario Kart-style go-karts through real Tokyo streets in costume. Wild and completely legal.',bookAhead:true,bookNote:'Requires International Driving Permit (get from AAA before flying, ~$20)',bookUrl:'https://www.maricar.com/en/',siteUrl:'https://www.maricar.com/en/',mapUrl:'https://maps.google.com/?q=MariCar+Akihabara+Tokyo'},
-  {id:'t18',name:'Nissan Crossing Ginza',city:'Tokyo',cat:'Cars',emoji:'🏁',duration:1,cost:0,desc:"Nissan's glass showroom in Ginza — concept cars, GT-Rs, and the latest models on display.",bookAhead:false,siteUrl:'https://www.nissan-global.com/EN/NISSAN/CROSSING/',mapUrl:'https://maps.google.com/?q=Nissan+Crossing+Ginza+Tokyo'},
-  {id:'t19',name:'Karaoke in Shinjuku',city:'Tokyo',cat:'Nightlife',emoji:'🎤',duration:2,cost:20,desc:'Private room karaoke — English songs, unlimited drinks, and zero judgment. A must-do night.',bookAhead:false,siteUrl:'https://www.karaoke-kan.co.jp/en/',mapUrl:'https://maps.google.com/?q=Karaoke+Kan+Shinjuku+Tokyo'},
-  {id:'t20',name:'Ueno Park & Museums',city:'Tokyo',cat:'Nature',emoji:'🌸',duration:2,cost:5,desc:'Big green park with the National Museum, zoo, Shinobazu Pond, and food stalls.',bookAhead:false,siteUrl:'https://www.tnm.jp/?lang=en',mapUrl:'https://maps.google.com/?q=Ueno+Park+Tokyo'},
-  {id:'t21',name:'Downtown Tokyo Walk',city:'Tokyo',cat:'Tech',emoji:'🏙️',duration:3,cost:0,desc:'Walk the main arteries of central Tokyo — Shinjuku neon, the Shibuya scramble crossing, Ginza luxury boulevard, and the Imperial Palace gardens. The city itself is the attraction.',bookAhead:false,mapUrl:'https://maps.google.com/?q=Shinjuku+Tokyo'},
-  {id:'t22',name:'Mt. Fuji Day Trip',city:'Tokyo',cat:'Nature',emoji:'🗻',duration:10,cost:30,desc:"A 2-hour bus from Shinjuku to Fuji 5th Station (2,305m) — volcanic rock fields, sweeping views, and the crater trail if weather allows. September is the last month the summit trail is officially open. Even a clear view from the Kawaguchiko lake shore is unforgettable.",bookAhead:false,siteUrl:'https://www.fujisan-climb.jp/en/',mapUrl:'https://maps.google.com/?q=Mt+Fuji+5th+Station+Japan'},
+  {id:'t1',name:'teamLab Borderless',city:'Tokyo',cat:'Tech',emoji:'🌐',duration:3,cost:30,desc:'Immersive rooms of living digital art — light and sound you can walk through. One of the most unique places on Earth.',bookAhead:true,bookNote:'Book at teamlab.art 2–4 weeks ahead',bookUrl:'https://teamlab.art/e/borderless-tokyo/',siteUrl:'https://teamlab.art/e/borderless-tokyo/',mapUrl:'https://maps.google.com/?q=teamLab+Borderless+Tokyo',lat:35.6580,lng:139.7431},
+  {id:'t2',name:'Shibuya Sky',city:'Tokyo',cat:'Tech',emoji:'🌆',duration:1.5,cost:20,desc:'360° rooftop observation deck high above the Shibuya Scramble crossing. Stunning day or night.',bookAhead:true,bookNote:'Book online to skip the line',bookUrl:'https://www.klook.com/en-US/search/?q=shibuya+sky+observation+deck',siteUrl:'https://www.shibuya-sky.com/en/',mapUrl:'https://maps.google.com/?q=Shibuya+Sky+Tokyo',lat:35.6580,lng:139.7016},
+  {id:'t3',name:'Akihabara Arcades',city:'Tokyo',cat:'Tech',emoji:'🕹️',duration:2,cost:20,desc:'Multi-floor game arcades packed with retro cabs, claw machines, and every game you can imagine.',bookAhead:false,siteUrl:'https://www.gotokyo.org/en/spot/15/index.html',mapUrl:'https://maps.google.com/?q=Akihabara+Electric+Town+Tokyo',lat:35.7023,lng:139.7745},
+  {id:'t4',name:'Ghibli Museum',city:'Tokyo',cat:'Tech',emoji:'🎬',duration:3,cost:15,desc:"Studio Ghibli's magical museum in Mitaka. Robots, original animation cells, and a rooftop Totoro.",bookAhead:true,bookNote:'Sells out months ahead — book at l-tike.com the moment tickets open (10th of each month)',bookUrl:'https://www.klook.com/en-US/search/?q=ghibli+museum+tokyo+tickets',siteUrl:'https://www.ghibli-museum.jp/en/',mapUrl:'https://maps.google.com/?q=Ghibli+Museum+Mitaka+Tokyo',lat:35.6963,lng:139.5705},
+  {id:'t5',name:'Tokyo Skytree',city:'Tokyo',cat:'Tech',emoji:'🗼',duration:1.5,cost:25,desc:'The tallest tower in Japan with two observation decks. Clear days you can spot Mt. Fuji.',bookAhead:false,siteUrl:'https://www.tokyo-skytree.jp/en/',bookUrl:'https://www.klook.com/en-US/search/?q=tokyo+skytree',mapUrl:'https://maps.google.com/?q=Tokyo+Skytree',lat:35.7101,lng:139.8107},
+  {id:'t6',name:'Tsukiji Market Breakfast',city:'Tokyo',cat:'Food',emoji:'🍣',duration:2,cost:25,desc:"The outer market still hums with the world's best sushi breakfast. Go 6–8am for the freshest cuts.",bookAhead:false,siteUrl:'https://www.tsukiji.or.jp/english/',mapUrl:'https://maps.google.com/?q=Tsukiji+Outer+Market+Tokyo',lat:35.6654,lng:139.7707},
+  {id:'t7',name:'Ramen in Shinjuku',city:'Tokyo',cat:'Food',emoji:'🍜',duration:1,cost:15,desc:'Deep broth, chewy noodles, perfect egg. Ichiran or Fuunji — both lines are worth it.',bookAhead:false,siteUrl:'https://en.ichiran.com/',mapUrl:'https://maps.google.com/?q=Ichiran+Ramen+Shinjuku+Tokyo',lat:35.6940,lng:139.7039},
+  {id:'t8',name:'Jiggly Pancakes',city:'Tokyo',cat:'Food',emoji:'🥞',duration:1,cost:15,desc:'Soufflé pancakes that wobble when the plate arrives. The line is part of the experience.',bookAhead:false,siteUrl:'https://www.thehappypancake.com/',mapUrl:'https://maps.google.com/?q=A+Happy+Pancake+Omotesando+Tokyo',lat:35.6689,lng:139.7077},
+  {id:'t9',name:'Omoide Yokocho',city:'Tokyo',cat:'Food',emoji:'🏮',duration:2,cost:30,desc:'Memory Lane — a tiny smoky alley in Shinjuku packed with izakayas. Order yakitori and cold beer.',bookAhead:false,mapUrl:'https://maps.google.com/?q=Omoide+Yokocho+Shinjuku+Tokyo',lat:35.6909,lng:139.7001},
+  {id:'t10',name:'Golden Gai Bar Hopping',city:'Tokyo',cat:'Nightlife',emoji:'🍺',duration:3,cost:30,desc:'Six narrow alleys with 200+ tiny bars, each seating 6–8 people. Every bar has its own personality.',bookAhead:false,mapUrl:'https://maps.google.com/?q=Golden+Gai+Shinjuku+Tokyo',lat:35.6938,lng:139.7027},
+  {id:'t11',name:'Shimokitazawa Vintage',city:'Tokyo',cat:'Nightlife',emoji:'👕',duration:2,cost:0,desc:"Tokyo's coolest neighborhood — vintage clothes, record shops, live music, and great coffee.",bookAhead:false,mapUrl:'https://maps.google.com/?q=Shimokitazawa+Tokyo',lat:35.6614,lng:139.6681},
+  {id:'t12',name:'Harajuku & Takeshita Dori',city:'Tokyo',cat:'Nightlife',emoji:'🌈',duration:1.5,cost:0,desc:'Wild fashion, crepe stands, and people-watching at its most Tokyo. Short walk from Meiji Shrine.',bookAhead:false,mapUrl:'https://maps.google.com/?q=Takeshita+Street+Harajuku+Tokyo',lat:35.6702,lng:139.7026},
+  {id:'t13',name:'Senso-ji Temple',city:'Tokyo',cat:'History',emoji:'⛩️',duration:1.5,cost:0,desc:"Tokyo's oldest temple in Asakusa. Nakamise shopping street leads up to it — buy ningyo-yaki cakes.",bookAhead:false,siteUrl:'https://www.senso-ji.jp/english/',mapUrl:'https://maps.google.com/?q=Senso-ji+Temple+Asakusa+Tokyo',lat:35.7147,lng:139.7966},
+  {id:'t14',name:'Meiji Shrine',city:'Tokyo',cat:'History',emoji:'🌲',duration:1,cost:0,desc:'A forested Shinto shrine in the middle of the city. Peaceful, grand, and a completely different world from Shibuya.',bookAhead:false,siteUrl:'https://www.meijijingu.or.jp/en/',mapUrl:'https://maps.google.com/?q=Meiji+Shrine+Tokyo',lat:35.6763,lng:139.6993},
+  {id:'t15',name:'Daikoku PA Car Meet',city:'Tokyo',cat:'Cars',emoji:'🚗',duration:3,cost:0,desc:'Late-night highway service area that becomes a spontaneous car show. R34s, GTRs, AEs — pure JDM holy land. Go 10pm+.',bookAhead:false,mapUrl:'https://maps.google.com/?q=Daikoku+Parking+Area+Yokohama',lat:35.4738,lng:139.6630},
+  {id:'t16',name:'Up Garage Parts Hunt',city:'Tokyo',cat:'Cars',emoji:'🔧',duration:2,cost:0,desc:"Japan's biggest used JDM parts chain. You will find things you didn't know you needed.",bookAhead:false,siteUrl:'https://www.up-garage.com/shop/',mapUrl:'https://maps.google.com/?q=Up+Garage+Tokyo',lat:35.6900,lng:139.7200},
+  {id:'t17',name:'Street Go-Karting',city:'Tokyo',cat:'Cars',emoji:'🏎️',duration:1.5,cost:50,desc:'Drive Mario Kart-style go-karts through real Tokyo streets in costume. Wild and completely legal.',bookAhead:true,bookNote:'Requires International Driving Permit (get from AAA before flying, ~$20)',bookUrl:'https://www.klook.com/en-US/search/?q=tokyo+go+kart+street',siteUrl:'https://www.klook.com/en-US/search/?q=tokyo+go+kart+street',mapUrl:'https://maps.google.com/?q=MariCar+Akihabara+Tokyo',lat:35.6980,lng:139.7716},
+  {id:'t18',name:'Nissan Gallery Ginza',city:'Tokyo',cat:'Cars',emoji:'🏁',duration:1,cost:0,desc:"Nissan's glass showroom in Ginza — concept cars, GT-Rs, and the latest models on display.",bookAhead:false,siteUrl:'https://www.nissan.co.jp/EXPERIENCE/NISSAN_GALLERY/',mapUrl:'https://maps.google.com/?q=Nissan+Gallery+Ginza+Tokyo',lat:35.6718,lng:139.7649},
+  {id:'t19',name:'Karaoke in Shinjuku',city:'Tokyo',cat:'Nightlife',emoji:'🎤',duration:2,cost:20,desc:'Private room karaoke — English songs, unlimited drinks, and zero judgment. A must-do night.',bookAhead:false,siteUrl:'https://www.joysound.com/web/search/shop',mapUrl:'https://maps.google.com/?q=Karaoke+Kan+Shinjuku+Tokyo',lat:35.6940,lng:139.7039},
+  {id:'t20',name:'Ueno Park & Museums',city:'Tokyo',cat:'Nature',emoji:'🌸',duration:2,cost:5,desc:'Big green park with the National Museum, zoo, Shinobazu Pond, and food stalls.',bookAhead:false,siteUrl:'https://www.tnm.jp/?lang=en',mapUrl:'https://maps.google.com/?q=Ueno+Park+Tokyo',lat:35.7146,lng:139.7734},
+  {id:'t21',name:'Downtown Tokyo Walk',city:'Tokyo',cat:'Tech',emoji:'🏙️',duration:3,cost:0,desc:'Walk the main arteries of central Tokyo — Shinjuku neon, the Shibuya scramble crossing, Ginza luxury boulevard, and the Imperial Palace gardens. The city itself is the attraction.',bookAhead:false,siteUrl:'https://www.gotokyo.org/en/index.html',mapUrl:'https://maps.google.com/?q=Shinjuku+Tokyo',lat:35.6896,lng:139.6917},
+  {id:'t22',name:'Mt. Fuji Day Trip',city:'Tokyo',cat:'Nature',emoji:'🗻',duration:10,cost:30,desc:"A 2-hour bus from Shinjuku to Fuji 5th Station (2,305m) — volcanic rock fields, sweeping views, and the crater trail if weather allows. September is the last month the summit trail is officially open. Even a clear view from the Kawaguchiko lake shore is unforgettable.",bookAhead:false,siteUrl:'https://www.fujisan-climb.jp/en/',bookUrl:'https://www.klook.com/en-US/search/?q=mount+fuji+day+trip+tokyo',mapUrl:'https://maps.google.com/?q=Mt+Fuji+5th+Station+Japan',lat:35.3606,lng:138.7274},
   // KYOTO
-  {id:'k1',name:'Fushimi Inari Gates',city:'Kyoto',cat:'History',emoji:'⛩️',duration:3,cost:0,desc:"Thousands of vermillion torii gates winding up a mountain — one of Japan's most iconic sights. Go at dawn or after 6pm.",bookAhead:false,siteUrl:'https://inari.jp/en/',mapUrl:'https://maps.google.com/?q=Fushimi+Inari+Taisha+Kyoto'},
-  {id:'k2',name:'Arashiyama Bamboo Grove',city:'Kyoto',cat:'Nature',emoji:'🎋',duration:1.5,cost:0,desc:'A path through towering bamboo that creaks and rustles in the wind. Get there by 7am to beat the crowds.',bookAhead:false,mapUrl:'https://maps.google.com/?q=Arashiyama+Bamboo+Grove+Kyoto'},
-  {id:'k3',name:'Kinkaku-ji (Golden Pavilion)',city:'Kyoto',cat:'History',emoji:'🏯',duration:1,cost:5,desc:"A Zen temple covered in real gold leaf, reflected in a still pond. One of Japan's most photographed spots.",bookAhead:false,siteUrl:'https://www.kinkakuji.com/en/',mapUrl:'https://maps.google.com/?q=Kinkaku-ji+Golden+Pavilion+Kyoto'},
-  {id:'k4',name:'Gion at Dusk',city:'Kyoto',cat:'History',emoji:'🏮',duration:1.5,cost:0,desc:"Kyoto's ancient geisha district — wooden teahouses, stone lanterns, and if you're lucky, a glimpse of a geiko.",bookAhead:false,mapUrl:'https://maps.google.com/?q=Gion+District+Kyoto'},
-  {id:'k5',name:'Tea Ceremony',city:'Kyoto',cat:'History',emoji:'🍵',duration:1.5,cost:30,desc:'Sit, slow down, and learn the centuries-old art of preparing and drinking matcha. Deeply calming.',bookAhead:true,bookNote:'Book a session in Gion ahead of time',bookUrl:'https://www.airbnb.com/s/Kyoto/experiences?refinement_paths%5B%5D=%2Fexperiences&query=tea+ceremony+kyoto',siteUrl:'https://www.airbnb.com/s/Kyoto/experiences?query=tea+ceremony',mapUrl:'https://maps.google.com/?q=Tea+Ceremony+Gion+Kyoto'},
-  {id:'k6',name:'Nishiki Market',city:'Kyoto',cat:'Food',emoji:'🛒',duration:1.5,cost:20,desc:"Kyoto's Kitchen — a narrow covered market with pickles, skewers, tamagoyaki, and every snack imaginable.",bookAhead:false,siteUrl:'https://www.kyoto-nishiki.or.jp/en/',mapUrl:'https://maps.google.com/?q=Nishiki+Market+Kyoto'},
-  {id:'k7',name:'Kaiseki Dinner',city:'Kyoto',cat:'Food',emoji:'🍱',duration:2,cost:80,desc:"Traditional multi-course Japanese cuisine — a dozen tiny, perfect dishes. The most elegant meal you'll ever have.",bookAhead:true,bookNote:'Book 2–4 weeks ahead — look for English-friendly restaurants',bookUrl:'https://www.tablecheck.com/en/japan/reserve?prefecture=kyoto&cuisine=kaiseki',siteUrl:'https://www.tablecheck.com/en/japan/reserve?prefecture=kyoto&cuisine=kaiseki',mapUrl:'https://maps.google.com/?q=Kaiseki+Restaurant+Kyoto'},
-  {id:'k8',name:'Ryokan Night Stay',city:'Kyoto',cat:'History',emoji:'🛁',duration:24,cost:200,desc:'Sleep in a traditional Japanese inn — tatami floors, yukata robe, private onsen bath, and a full kaiseki breakfast.',bookAhead:true,bookNote:'Book several months ahead — fills fast. Includes dinner & breakfast.',bookUrl:'https://www.booking.com/searchresults.en-gb.html?ss=kyoto+ryokan&nflt=property_type%3D224',siteUrl:'https://www.booking.com/searchresults.en-gb.html?ss=kyoto+ryokan',mapUrl:'https://maps.google.com/?q=Ryokan+Kyoto'},
-  {id:'k9',name:'Kiyomizu-dera Temple',city:'Kyoto',cat:'History',emoji:'🕌',duration:1.5,cost:5,desc:'A wooden stage temple built on a cliff over the forest — panoramic views of Kyoto below.',bookAhead:false,siteUrl:'https://www.kiyomizudera.or.jp/en/',mapUrl:'https://maps.google.com/?q=Kiyomizudera+Temple+Kyoto'},
-  {id:'k10',name:"Philosopher's Path",city:'Kyoto',cat:'Nature',emoji:'🚶',duration:1.5,cost:0,desc:'A quiet stone path along a canal connecting several temples. Named after a philosopher who walked it daily.',bookAhead:false,mapUrl:'https://maps.google.com/?q=Philosopher%27s+Path+Kyoto'},
-  {id:'k11',name:'Sake Tasting — Fushimi',city:'Kyoto',cat:'Food',emoji:'🍶',duration:1.5,cost:15,desc:"Kyoto's Fushimi district has been brewing sake for centuries. Walk the sake street and taste at multiple breweries.",bookAhead:false,siteUrl:'https://www.gekkeikan.co.jp/english/enjoy/museum/',mapUrl:'https://maps.google.com/?q=Fushimi+Sake+District+Kyoto'},
-  {id:'k12',name:'Sagano Scenic Railway',city:'Kyoto',cat:'Nature',emoji:'🚞',duration:1,cost:10,desc:'A charming open-air train through the Hozu River gorge and bamboo forests of Arashiyama.',bookAhead:true,bookNote:'Buy tickets at the station early — can sell out on weekends',bookUrl:'https://www.sagano-kanko.co.jp/en/ticket.php',siteUrl:'https://www.sagano-kanko.co.jp/en/',mapUrl:'https://maps.google.com/?q=Sagano+Scenic+Railway+Arashiyama+Kyoto'},
-  {id:'k13',name:'Arashiyama Monkey Park',city:'Kyoto',cat:'Nature',emoji:'🐒',duration:1.5,cost:7,desc:'Hike a small mountain to reach a park with 170 wild Japanese macaques. Feed them through wire from the inside.',bookAhead:false,siteUrl:'https://www.monkeypark.jp/',mapUrl:'https://maps.google.com/?q=Iwatayama+Monkey+Park+Arashiyama+Kyoto'},
-  {id:'k14',name:'Nijo Castle',city:'Kyoto',cat:'History',emoji:'🏰',duration:1.5,cost:8,desc:"The shogun's Kyoto palace with famous 'nightingale floors' that squeak when walked on — an early security system.",bookAhead:false,siteUrl:'https://nijo-jocastle.city.kyoto.lg.jp/en/',mapUrl:'https://maps.google.com/?q=Nijo+Castle+Kyoto'},
+  {id:'k1',name:'Fushimi Inari Gates',city:'Kyoto',cat:'History',emoji:'⛩️',duration:3,cost:0,desc:"Thousands of vermillion torii gates winding up a mountain — one of Japan's most iconic sights. Go at dawn or after 6pm.",bookAhead:false,siteUrl:'https://inari.jp/en/',mapUrl:'https://maps.google.com/?q=Fushimi+Inari+Taisha+Kyoto',lat:34.9671,lng:135.7727},
+  {id:'k2',name:'Arashiyama Bamboo Grove',city:'Kyoto',cat:'Nature',emoji:'🎋',duration:1.5,cost:0,desc:'A path through towering bamboo that creaks and rustles in the wind. Get there by 7am to beat the crowds.',bookAhead:false,siteUrl:'https://www.arashiyama-kyoto.com/',mapUrl:'https://maps.google.com/?q=Arashiyama+Bamboo+Grove+Kyoto',lat:35.0166,lng:135.6724},
+  {id:'k3',name:'Kinkaku-ji (Golden Pavilion)',city:'Kyoto',cat:'History',emoji:'🏯',duration:1,cost:5,desc:"A Zen temple covered in real gold leaf, reflected in a still pond. One of Japan's most photographed spots.",bookAhead:false,siteUrl:'https://www.kinkakuji.com/en/',mapUrl:'https://maps.google.com/?q=Kinkaku-ji+Golden+Pavilion+Kyoto',lat:35.0394,lng:135.7292},
+  {id:'k4',name:'Gion at Dusk',city:'Kyoto',cat:'History',emoji:'🏮',duration:1.5,cost:0,desc:"Kyoto's ancient geisha district — wooden teahouses, stone lanterns, and if you're lucky, a glimpse of a geiko.",bookAhead:false,siteUrl:'https://www.kyoto.travel/en/neighborhood/gion',mapUrl:'https://maps.google.com/?q=Gion+District+Kyoto',lat:35.0036,lng:135.7752},
+  {id:'k5',name:'Tea Ceremony',city:'Kyoto',cat:'History',emoji:'🍵',duration:1.5,cost:30,desc:'Sit, slow down, and learn the centuries-old art of preparing and drinking matcha. Deeply calming.',bookAhead:true,bookNote:'Book a session in Gion ahead of time',bookUrl:'https://www.klook.com/en-US/search/?q=kyoto+tea+ceremony',siteUrl:'https://www.klook.com/en-US/search/?q=kyoto+tea+ceremony',mapUrl:'https://maps.google.com/?q=Tea+Ceremony+Gion+Kyoto',lat:35.0036,lng:135.7752},
+  {id:'k6',name:'Nishiki Market',city:'Kyoto',cat:'Food',emoji:'🛒',duration:1.5,cost:20,desc:"Kyoto's Kitchen — a narrow covered market with pickles, skewers, tamagoyaki, and every snack imaginable.",bookAhead:false,siteUrl:'https://www.kyoto-nishiki.or.jp/en/',mapUrl:'https://maps.google.com/?q=Nishiki+Market+Kyoto',lat:35.0053,lng:135.7670},
+  {id:'k7',name:'Kaiseki Dinner',city:'Kyoto',cat:'Food',emoji:'🍱',duration:2,cost:80,desc:"Traditional multi-course Japanese cuisine — a dozen tiny, perfect dishes. The most elegant meal you'll ever have.",bookAhead:true,bookNote:'Book 2–4 weeks ahead — look for English-friendly restaurants',bookUrl:'https://www.tablecheck.com/en/japan/reserve?area=kyoto',siteUrl:'https://www.tablecheck.com/en/japan/reserve?area=kyoto',mapUrl:'https://maps.google.com/?q=Kaiseki+Restaurant+Kyoto',lat:35.0080,lng:135.7680},
+  {id:'k8',name:'Ryokan Night Stay',city:'Kyoto',cat:'History',emoji:'🛁',duration:24,cost:200,desc:'Sleep in a traditional Japanese inn — tatami floors, yukata robe, private onsen bath, and a full kaiseki breakfast.',bookAhead:true,bookNote:'Book several months ahead — fills fast. Includes dinner & breakfast.',bookUrl:'https://www.booking.com/searchresults.en-gb.html?ss=Kyoto+ryokan',siteUrl:'https://www.booking.com/searchresults.en-gb.html?ss=Kyoto+ryokan',mapUrl:'https://maps.google.com/?q=Ryokan+Kyoto',lat:35.0160,lng:135.7680},
+  {id:'k9',name:'Kiyomizu-dera Temple',city:'Kyoto',cat:'History',emoji:'🕌',duration:1.5,cost:5,desc:'A wooden stage temple built on a cliff over the forest — panoramic views of Kyoto below.',bookAhead:false,siteUrl:'https://www.kiyomizudera.or.jp/en/',mapUrl:'https://maps.google.com/?q=Kiyomizudera+Temple+Kyoto',lat:34.9948,lng:135.7851},
+  {id:'k10',name:"Philosopher's Path",city:'Kyoto',cat:'Nature',emoji:'🚶',duration:1.5,cost:0,desc:'A quiet stone path along a canal connecting several temples. Named after a philosopher who walked it daily.',bookAhead:false,siteUrl:'https://www.japan-guide.com/e/e3950.html',mapUrl:'https://maps.google.com/?q=Philosopher%27s+Path+Kyoto',lat:35.0177,lng:135.7938},
+  {id:'k11',name:'Sake Tasting — Fushimi',city:'Kyoto',cat:'Food',emoji:'🍶',duration:1.5,cost:15,desc:"Kyoto's Fushimi district has been brewing sake for centuries. Walk the sake street and taste at multiple breweries.",bookAhead:false,siteUrl:'https://www.gekkeikan.co.jp/english/enjoy/museum/',mapUrl:'https://maps.google.com/?q=Fushimi+Sake+District+Kyoto',lat:34.9440,lng:135.7659},
+  {id:'k12',name:'Sagano Scenic Railway',city:'Kyoto',cat:'Nature',emoji:'🚞',duration:1,cost:10,desc:'A charming open-air train through the Hozu River gorge and bamboo forests of Arashiyama.',bookAhead:true,bookNote:'Buy tickets at the station early — can sell out on weekends',bookUrl:'https://www.klook.com/en-US/search/?q=sagano+scenic+railway+kyoto',siteUrl:'https://www.sagano-kanko.co.jp/en/',mapUrl:'https://maps.google.com/?q=Sagano+Scenic+Railway+Arashiyama+Kyoto',lat:35.0172,lng:135.6714},
+  {id:'k13',name:'Arashiyama Monkey Park',city:'Kyoto',cat:'Nature',emoji:'🐒',duration:1.5,cost:7,desc:'Hike a small mountain to reach a park with 170 wild Japanese macaques. Feed them through wire from the inside.',bookAhead:false,siteUrl:'https://www.monkeypark.jp/',mapUrl:'https://maps.google.com/?q=Iwatayama+Monkey+Park+Arashiyama+Kyoto',lat:35.0098,lng:135.6720},
+  {id:'k14',name:'Nijo Castle',city:'Kyoto',cat:'History',emoji:'🏰',duration:1.5,cost:8,desc:"The shogun's Kyoto palace with famous 'nightingale floors' that squeak when walked on — an early security system.",bookAhead:false,siteUrl:'https://nijo-jocastle.city.kyoto.lg.jp/en/',mapUrl:'https://maps.google.com/?q=Nijo+Castle+Kyoto',lat:35.0142,lng:135.7481},
   // OSAKA
-  {id:'o1',name:'Dotonbori Street Food',city:'Osaka',cat:'Food',emoji:'🦑',duration:2,cost:30,desc:"Osaka's neon entertainment district and the city's beating culinary heart. Takoyaki, ramen, crab claw signs.",bookAhead:false,mapUrl:'https://maps.google.com/?q=Dotonbori+Osaka'},
-  {id:'o2',name:'Kuromon Market',city:'Osaka',cat:'Food',emoji:'🐟',duration:1.5,cost:20,desc:"Osaka's biggest covered market — fresh seafood, wagyu skewers, and vendors who'll cook on the spot.",bookAhead:false,siteUrl:'https://kuromon.com/en/',mapUrl:'https://maps.google.com/?q=Kuromon+Market+Osaka'},
-  {id:'o3',name:'Takoyaki & Okonomiyaki',city:'Osaka',cat:'Food',emoji:'🥘',duration:1,cost:15,desc:"Osaka invented both — octopus balls and savory pancakes. Mandatory eating. Kiji restaurant for okonomiyaki.",bookAhead:false,mapUrl:'https://maps.google.com/?q=Kiji+Okonomiyaki+Osaka'},
-  {id:'o4',name:'Super Nintendo World',city:'Osaka',cat:'Tech',emoji:'🍄',duration:4,cost:80,desc:"A fully immersive Mario world inside Universal Studios Japan. Mario Kart ride, Donkey Kong area, interactive power-ups.",bookAhead:true,bookNote:'Book USJ tickets + Nintendo World express pass weeks ahead',bookUrl:'https://www.usj.co.jp/web/en/us/tickets',siteUrl:'https://www.usj.co.jp/web/en/us/areas/super-nintendo-world',mapUrl:'https://maps.google.com/?q=Universal+Studios+Japan+Osaka'},
-  {id:'o5',name:'Osaka Castle',city:'Osaka',cat:'History',emoji:'🏯',duration:1.5,cost:6,desc:"One of Japan's most iconic castles surrounded by a moat and cherry trees. Great museum inside.",bookAhead:false,siteUrl:'https://www.osakacastle.net/english/',mapUrl:'https://maps.google.com/?q=Osaka+Castle'},
-  {id:'o6',name:'Day Trip to Nara',city:'Osaka',cat:'Nature',emoji:'🦌',duration:4,cost:15,desc:'Hundreds of wild deer roam freely and bow to you for crackers. Todai-ji temple houses a giant bronze Buddha.',bookAhead:false,siteUrl:'https://www.naravisitor.jp/en',mapUrl:'https://maps.google.com/?q=Nara+Park+Japan'},
-  {id:'o7',name:'Umeda Sky Building',city:'Osaka',cat:'Tech',emoji:'🔭',duration:1,cost:16,desc:'Two towers connected by a floating sky garden 170m up — one of the most striking modern buildings in Japan.',bookAhead:false,siteUrl:'https://www.skybldg.co.jp/en/',mapUrl:'https://maps.google.com/?q=Umeda+Sky+Building+Osaka'},
-  {id:'o8',name:'Den Den Town',city:'Osaka',cat:'Tech',emoji:'🎮',duration:2,cost:20,desc:"Osaka's own Akihabara — electronics, anime, retro games, figures, and the densest concentration of hobby shops.",bookAhead:false,mapUrl:'https://maps.google.com/?q=Den+Den+Town+Nipponbashi+Osaka'},
-  {id:'o9',name:'Himeji Castle',city:'Osaka',cat:'History',emoji:'🏯',duration:4,cost:30,desc:"Japan's most beautiful castle — a UNESCO World Heritage Site nicknamed the White Heron. 45 min from Osaka by bullet train.",bookAhead:false,siteUrl:'https://www.himejicastle.jp/en/',mapUrl:'https://maps.google.com/?q=Himeji+Castle'},
-  {id:'o10',name:'Kobe Beef Lunch',city:'Osaka',cat:'Food',emoji:'🥩',duration:4,cost:95,desc:'Day trip to Kobe for the real thing — teppanyaki-grilled A5 Kobe beef. Misono restaurant is the famous one.',bookAhead:true,bookNote:'Reserve at your restaurant — popular spots book up',bookUrl:'https://www.tablecheck.com/en/japan/reserve?prefecture=hyogo&cuisine=wagyu',siteUrl:'https://www.kobe-navi.com/en/gourmet/kobemeat/',mapUrl:'https://maps.google.com/?q=Kobe+Beef+Misono+Restaurant'},
-  {id:'o11',name:'Shinsaibashi Shopping',city:'Osaka',cat:'Nightlife',emoji:'🛍️',duration:2,cost:0,desc:"Osaka's main covered shopping arcade — 600m of stores, street food, and people.",bookAhead:false,mapUrl:'https://maps.google.com/?q=Shinsaibashi+Shopping+Street+Osaka'},
-  {id:'o12',name:'Osaka Baseball Game',city:'Osaka',cat:'Nightlife',emoji:'⚾',duration:3,cost:30,desc:"Orix Buffaloes play September home games at Kyocera Dome. Japanese baseball crowds are the loudest in the world.",bookAhead:true,bookNote:'Check the September schedule and buy tickets online',bookUrl:'https://www.buffaloes.co.jp/ticket/',siteUrl:'https://www.buffaloes.co.jp/',mapUrl:'https://maps.google.com/?q=Kyocera+Dome+Osaka'},
+  {id:'o1',name:'Dotonbori Street Food',city:'Osaka',cat:'Food',emoji:'🦑',duration:2,cost:30,desc:"Osaka's neon entertainment district and the city's beating culinary heart. Takoyaki, ramen, crab claw signs.",bookAhead:false,siteUrl:'https://dotonbori.or.jp/en/',mapUrl:'https://maps.google.com/?q=Dotonbori+Osaka',lat:34.6687,lng:135.5013},
+  {id:'o2',name:'Kuromon Market',city:'Osaka',cat:'Food',emoji:'🐟',duration:1.5,cost:20,desc:"Osaka's biggest covered market — fresh seafood, wagyu skewers, and vendors who'll cook on the spot.",bookAhead:false,siteUrl:'https://kuromon.com/en/',mapUrl:'https://maps.google.com/?q=Kuromon+Market+Osaka',lat:34.6680,lng:135.5071},
+  {id:'o3',name:'Takoyaki & Okonomiyaki',city:'Osaka',cat:'Food',emoji:'🥘',duration:1,cost:15,desc:"Osaka invented both — octopus balls and savory pancakes. Mandatory eating. Kiji restaurant for okonomiyaki.",bookAhead:false,siteUrl:'https://www.osaka-info.jp/en/food/',mapUrl:'https://maps.google.com/?q=Kiji+Okonomiyaki+Osaka',lat:34.6687,lng:135.5020},
+  {id:'o4',name:'Super Nintendo World',city:'Osaka',cat:'Tech',emoji:'🍄',duration:4,cost:80,desc:"A fully immersive Mario world inside Universal Studios Japan. Mario Kart ride, Donkey Kong area, interactive power-ups.",bookAhead:true,bookNote:'Book USJ tickets + Nintendo World express pass weeks ahead',bookUrl:'https://www.usj.co.jp/web/en/us/tickets',siteUrl:'https://www.usj.co.jp/web/en/us/areas/super-nintendo-world',mapUrl:'https://maps.google.com/?q=Universal+Studios+Japan+Osaka',lat:34.6654,lng:135.4321},
+  {id:'o5',name:'Osaka Castle',city:'Osaka',cat:'History',emoji:'🏯',duration:1.5,cost:6,desc:"One of Japan's most iconic castles surrounded by a moat and cherry trees. Great museum inside.",bookAhead:false,siteUrl:'https://www.osakacastle.net/english/',mapUrl:'https://maps.google.com/?q=Osaka+Castle',lat:34.6873,lng:135.5262},
+  {id:'o6',name:'Day Trip to Nara',city:'Osaka',cat:'Nature',emoji:'🦌',duration:4,cost:15,desc:'Hundreds of wild deer roam freely and bow to you for crackers. Todai-ji temple houses a giant bronze Buddha.',bookAhead:false,siteUrl:'https://www.japan-guide.com/e/e4103.html',mapUrl:'https://maps.google.com/?q=Nara+Park+Japan',lat:34.6851,lng:135.8048},
+  {id:'o7',name:'Umeda Sky Building',city:'Osaka',cat:'Tech',emoji:'🔭',duration:1,cost:16,desc:'Two towers connected by a floating sky garden 170m up — one of the most striking modern buildings in Japan.',bookAhead:false,siteUrl:'https://www.skybldg.co.jp/en/',bookUrl:'https://www.klook.com/en-US/search/?q=umeda+sky+building',mapUrl:'https://maps.google.com/?q=Umeda+Sky+Building+Osaka',lat:34.7056,lng:135.4904},
+  {id:'o8',name:'Den Den Town',city:'Osaka',cat:'Tech',emoji:'🎮',duration:2,cost:20,desc:"Osaka's own Akihabara — electronics, anime, retro games, figures, and the densest concentration of hobby shops.",bookAhead:false,siteUrl:'https://www.osaka-info.jp/en/',mapUrl:'https://maps.google.com/?q=Den+Den+Town+Nipponbashi+Osaka',lat:34.6620,lng:135.5060},
+  {id:'o9',name:'Himeji Castle',city:'Osaka',cat:'History',emoji:'🏯',duration:4,cost:30,desc:"Japan's most beautiful castle — a UNESCO World Heritage Site nicknamed the White Heron. 45 min from Osaka by bullet train.",bookAhead:false,siteUrl:'https://www.himejicastle.jp/en/',mapUrl:'https://maps.google.com/?q=Himeji+Castle',lat:34.8394,lng:134.6939},
+  {id:'o10',name:'Kobe Beef Lunch',city:'Osaka',cat:'Food',emoji:'🥩',duration:4,cost:95,desc:'Day trip to Kobe for the real thing — teppanyaki-grilled A5 Kobe beef. Misono restaurant is the famous one.',bookAhead:true,bookNote:'Reserve at your restaurant — popular spots book up',bookUrl:'https://www.tablecheck.com/en/japan/reserve?area=kobe',siteUrl:'https://www.kobe-tourism.com/en/',mapUrl:'https://maps.google.com/?q=Kobe+Beef+Misono+Restaurant',lat:34.6901,lng:135.1956},
+  {id:'o11',name:'Shinsaibashi Shopping',city:'Osaka',cat:'Nightlife',emoji:'🛍️',duration:2,cost:0,desc:"Osaka's main covered shopping arcade — 600m of stores, street food, and people.",bookAhead:false,siteUrl:'https://www.shinsaibashi.or.jp/en/',mapUrl:'https://maps.google.com/?q=Shinsaibashi+Shopping+Street+Osaka',lat:34.6726,lng:135.5013},
+  {id:'o12',name:'Osaka Baseball Game',city:'Osaka',cat:'Nightlife',emoji:'⚾',duration:3,cost:30,desc:"Orix Buffaloes play September home games at Kyocera Dome. Japanese baseball crowds are the loudest in the world.",bookAhead:true,bookNote:'Check the September schedule and buy tickets online',bookUrl:'https://www.buffaloes.co.jp/ticket/',siteUrl:'https://www.buffaloes.co.jp/en/',mapUrl:'https://maps.google.com/?q=Kyocera+Dome+Osaka',lat:34.6678,lng:135.4744},
 ];
 
 // City defaults: which days each city covers
@@ -516,6 +547,7 @@ function renderAll() {
   renderActivities();
   renderDays();
   updateBudget();
+  updateMiniMap();
   updateEndDate();
 }
 
@@ -701,6 +733,84 @@ function sendChat() {
   input.value = '';
   addUserMsg(text);
   setTimeout(() => { addBotMsg(getBotResponse(text)); }, 350);
+}
+
+// ============================================================
+// MINI MAP
+// ============================================================
+let miniMap = null;
+let miniMapMarkers = [];
+let miniMapCollapsed = false;
+
+function initMiniMap() {
+  miniMap = L.map('miniMap', {
+    zoom: 6,
+    center: [35.5, 136.5],
+    zoomControl: false,
+    attributionControl: false,
+    scrollWheelZoom: false,
+    dragging: true,
+    doubleClickZoom: false
+  });
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom:18}).addTo(miniMap);
+}
+
+function updateMiniMap() {
+  // Collect all planned activities with coordinates
+  const planned = [];
+  for (const [day, ids] of Object.entries(plan)) {
+    ids.forEach(id => {
+      const a = ACTIVITIES.find(x => x.id === id);
+      if (a && a.lat && a.lng) planned.push({a, day: parseInt(day)});
+    });
+  }
+
+  const panel = document.getElementById('miniMapPanel');
+  const countEl = document.getElementById('mmCount');
+
+  if (planned.length === 0) {
+    panel.style.display = 'none';
+    return;
+  }
+
+  panel.style.display = 'block';
+  countEl.textContent = planned.length;
+
+  if (!miniMap) initMiniMap();
+
+  // Clear old markers
+  miniMapMarkers.forEach(m => miniMap.removeLayer(m));
+  miniMapMarkers = [];
+
+  const bounds = [];
+  const COLORS = {Tokyo:'#355074', Kyoto:'#48624b', Osaka:'#6d4b66'};
+
+  planned.forEach(({a, day}) => {
+    const color = COLORS[a.city] || '#888';
+    const icon = L.divIcon({
+      className: '',
+      html: `<div style="position:relative"><div style="width:12px;height:12px;border-radius:50%;background:${color};border:2px solid #fff;box-shadow:0 1px 5px rgba(0,0,0,.4)"></div><div style="position:absolute;top:-16px;left:50%;transform:translateX(-50%);background:${color};color:#fff;font-size:9px;font-weight:700;padding:1px 4px;border-radius:8px;white-space:nowrap">${day}</div></div>`,
+      iconSize: [12, 12],
+      iconAnchor: [6, 6]
+    });
+    const marker = L.marker([a.lat, a.lng], {icon}).addTo(miniMap);
+    marker.bindPopup(`<b>${a.emoji} ${a.name}</b><br><span style="font-size:.78rem;color:#555">Day ${day} · ${a.city}</span>`);
+    miniMapMarkers.push(marker);
+    bounds.push([a.lat, a.lng]);
+  });
+
+  if (bounds.length > 0) {
+    miniMap.fitBounds(bounds, {padding: [20, 20], maxZoom: 10});
+    setTimeout(() => miniMap.invalidateSize(), 100);
+  }
+}
+
+function toggleMiniMap() {
+  miniMapCollapsed = !miniMapCollapsed;
+  document.getElementById('miniMap').classList.toggle('collapsed', miniMapCollapsed);
+  document.getElementById('mmLegend').classList.toggle('collapsed', miniMapCollapsed);
+  document.getElementById('mmToggleBtn').textContent = miniMapCollapsed ? '+' : '−';
+  if (!miniMapCollapsed && miniMap) setTimeout(() => miniMap.invalidateSize(), 150);
 }
 
 // ============================================================
